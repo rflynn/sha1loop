@@ -23,14 +23,14 @@ int main(void)
     SHA1Result(&ctx, (uint8_t*)x);
     y[0] = x[0]+1;
 
-    while (cnt < 0 || x[0] != y[0] || x[1] != y[1] || x[2] != y[2])
+    while (x[0] != y[0] || x[1] != y[1] || x[2] != y[2])
     {
         y[0] = x[0], y[1] = x[1], y[2] = x[2];
         SHA1Reset(&ctx);
         SHA1Input(&ctx, (uint8_t*)x, 20);
         SHA1Result(&ctx, (uint8_t*)x);
         cnt++;
-        if ((cnt & 0xfffff) == 0)
+        if ((cnt & 0xfffffff) == 0)
             fprintf(stderr, "%.1fB ", (double)cnt / 1e9);
     }
 

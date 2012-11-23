@@ -50,7 +50,7 @@ static void prep(uint8_t *dst, uint64_t dstlen,
 
     {
         uint32_t *dst32 = (uint32_t*)dst;
-        unsigned i;
+        //unsigned i;
         //for (i = 0; i < 15; i++)
             //dst32[i] = SWAP(dst32[i]);
         dst32[15] = SWAP(((uint32_t)srclen * 8));
@@ -85,8 +85,10 @@ int main(void)
 
     y[0] = x[0]+1; /* different */
 
-    while (*(uint64_t*)x != *(uint64_t*)y)
-    //while (x[0] != y[0] || x[1] != y[1] || x[2] != y[2] || x[3] != y[3] || x[4] != y[4])
+    //while (((uint64_t*)x)[0] != ((uint64_t*)y)[0] ||
+          //((uint64_t*)x)[1] != ((uint64_t*)y)[1] ||
+           //x[4] != y[4])
+    while (x[0] != y[0] || x[1] != y[1] || x[2] != y[2] || x[3] != y[3] || x[4] != y[4])
     {
         *(__m128i*)y = *(__m128i*)x, y[4] = x[4];
         //memcpy(y, x, sizeof y);
