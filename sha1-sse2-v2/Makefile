@@ -1,6 +1,6 @@
 LDFLAGS=-g -static
 CC=gcc
-CFLAGS=-std=c99 -O3 -g -Wall -march=pentium4 -fomit-frame-pointer
+CFLAGS=-std=c99 -O3 -g -Wall -march=nocona -fomit-frame-pointer
 
 #CFLAGS=-std=c99 -O2 -g -march=pentium4 -fno-alias -unroll1
 #CC=icc
