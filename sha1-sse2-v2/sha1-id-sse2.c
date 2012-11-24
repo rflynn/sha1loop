@@ -67,7 +67,7 @@ static time_t Start;
 
 static void report(uint64_t cnt)
 {
-    time_t elapsed = time(0) - start;
+    time_t elapsed = time(0) - Start;
     if (elapsed == 0)
         elapsed = 1;
     fprintf(stderr, "%.1fB(%.1fM/sec) ",
@@ -81,7 +81,7 @@ int main(void)
              x[16] __attribute__((aligned(16)));
     uint64_t cnt = 0;
  
-    start = time(0);
+    Start = time(0);
 
     sha1_init(h);
     prep((uint8_t*)x, sizeof x, (uint8_t*)"", 0);
