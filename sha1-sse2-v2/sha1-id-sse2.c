@@ -13,6 +13,14 @@
 #include <xmmintrin.h>
 #endif
 
+#define SHA1_INIT   \
+    { 0x67452301UL, \
+      0xEFCDAB89UL, \
+      0x98BADCFEUL, \
+      0x10325476UL, \
+      0xC3D2E1F0UL  \
+    }
+
 static void inline sha1_init(uint32_t h[5])
 {
     h[0] = 0x67452301UL;
@@ -27,14 +35,48 @@ static void inline sha1_init(uint32_t h[5])
 # define PRIu64 "llu"
 #endif
 
-static char * dump(char buf[41], const uint32_t x[5])
+static time_t Start;
+static char Buf[64];
+
+static char * dump_sha1(char buf[64], const uint32_t h[5])
 {
-    snprintf(buf, 41,
-        "%08" PRIx32 "%08" PRIx32 "%08" PRIx32
-        "%08" PRIx32 "%08" PRIx32,
-        x[0], x[1], x[2], x[3], x[4]);
+    snprintf(buf, 64,
+        "%08" PRIx32 " %08" PRIx32 " %08" PRIx32
+        " %08" PRIx32 " %08" PRIx32,
+        h[0], h[1], h[2], h[3], h[4]);
     return buf;
 }
+
+static void dump_msg(const uint32_t *chunk)
+{
+	for (unsigned i = 0; i < 16; i++)
+		printf("%08x ", chunk[i]);
+}
+
+static void dump_state(const uint32_t h[5], const uint32_t chunk[16])
+{
+    printf("h=%s chunk=", dump_sha1(Buf, h));
+    dump_msg(chunk);
+    fputc('\n', stdout);
+}
+
+static void report(uint64_t nth, const uint32_t h[5], const uint32_t chunk[16])
+{
+    unsigned long long elapsed = time(0) - Start;
+    printf("t=%llu nth=%" PRIu64 " ", elapsed, nth);
+    dump_state(h, chunk);
+}
+
+#if 0
+$ echo -n "" | sha1sum
+da39a3ee5e6b4b0d3255bfef95601890afd80709  -
+$ echo -ne '\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09' | sha1sum
+be1bdec0aa74b4dcb079943e70528096cca985f8  -
+$ echo -ne '\xee\xa3\x39\xda\x0d\x4b\x6b\x5e\xef\xbf\x55\x32\x55\x90\x18\x60\x95\x09\x07\xd8\xaf' | sha1sum
+edb20af7fe03f2a1e2aad51095491b7f5226f6f5  -
+#endif
+
+#define S(x) (x)
 
 #define SWAP(x)	\
     (((x) >> 24) | \
@@ -42,35 +84,89 @@ static char * dump(char buf[41], const uint32_t x[5])
      (((x) & 0x0000FF00UL) << 8) | \
      ((x) << 24))
 
+static void test_empty(void)
+{
+    uint32_t h[5] = SHA1_INIT;
+    const uint32_t chunk[16] = {
+        S(0x00000080), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+        S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+        S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+        S(0x00000000)
+    };
+    const uint32_t expect[5] = {
+        0xda39a3ee, 0x5e6b4b0d, 0x3255bfef, 0x95601890, 0xafd80709
+    };
+    sha1_step(h, chunk, 1);
+    dump_state(h, chunk);
+    assert(0 == memcmp(h, expect, sizeof expect));
+}
+
+static const uint32_t Chunk_DA39[16] = {
+    S(0xda39a3ee), S(0x5e6b4b0d), S(0x3255bfef), S(0x95601890), S(0xafd80709),
+    S(0x00000080), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+    S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+    S(0x000000a0)
+};
+
+static void test_da39(void)
+{
+    uint32_t h[5] = SHA1_INIT;
+    const uint32_t *chunk = Chunk_DA39;
+    const uint32_t expect[5] = {
+        0x2085e9ba, 0x62755587, 0xc413088f, 0xe2ab1523, 0xeaba1f95
+    };
+    sha1_step(h, chunk, 1);
+    dump_state(h, chunk);
+    assert(0 == memcmp(h, expect, sizeof expect));
+}
+
+static void test_6162(void)
+{
+    uint32_t h[5] = SHA1_INIT;
+    const uint32_t chunk[SHA1_STEP_SIZE] = {
+	    SWAP(0x61626380), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
+	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
+	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
+	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000018)
+    };
+    const uint32_t expect[SHA1_HASH_SIZE] = {
+	    0xa9993e36, 0x4706816a, 0xba3e2571, 0x7850c26c, 0x9cd0d89d
+    };
+    sha1_step(h, chunk, 1);
+    dump_state(h, chunk);
+    assert(0 == memcmp(h, expect, sizeof expect));
+}
+
+static void test_9200(void)
+{
+    uint32_t h[5] = SHA1_INIT;
+    const uint32_t chunk[16] = {
+        S(0x9200396e), S(0x483b4adf), S(0x96cbc0ab), S(0x59b3f34c), S(0x6df2a9bb),
+        S(0x00000080), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+        S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
+        S(0x000000a0)
+    };
+    sha1_step(h, chunk, 1);
+    dump_state(h, chunk);
+}
+
+
 static void prep(uint8_t *dst, uint64_t dstlen,
            const uint8_t *src, uint64_t srclen)
 {
+    uint32_t *dst32 = (uint32_t*)dst;
+
     memset(dst, 0, dstlen);
     memcpy(dst, src, srclen);
     dst[srclen] = 0x80; /* append the bit '1' to the message */
+    dst32[15] =((uint32_t)(srclen * 8));
 
-    {
-        uint32_t *dst32 = (uint32_t*)dst;
-        //unsigned i;
-        //for (i = 0; i < 15; i++)
-            //dst32[i] = SWAP(dst32[i]);
-        dst32[15] = SWAP(((uint32_t)srclen * 8));
-    }
-}
-
-static time_t Start;
-static char Buf[41];
-
-static void report(uint64_t nth, const uint32_t h[5])
-{
-    unsigned long long elapsed = time(0) - Start;
-    char buf[41];
-    fprintf(stderr, "t=%llu nth=%" PRIu64 " (%s) ",
-        elapsed, nth, dump(buf, h));
+    //for (unsigned i = 0; i < 16; i++)
+        //dst32[i] =(dst32[i]);
 }
 
 static void init(int argc, char *argv[],
-                 uint64_t *nth, uint32_t h[5], uint32_t x[16])
+                 uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
 {
     Start = time(0);
     if (argc != 1)
@@ -86,43 +182,59 @@ static void init(int argc, char *argv[],
             "%08" PRIx32 "%08" PRIx32 "%08" PRIx32
             "%08" PRIx32 "%08" PRIx32,
             h, h+1, h+2, h+3, h+4));
-        prep((uint8_t*)x, 64,
+        prep((uint8_t*)chunk, 64,
              (uint8_t*)h, 20);
         printf("nth=%" PRIu64 " sha1=%s\n",
-            *nth, dump(Buf, h));
+            *nth, dump_sha1(Buf, h));
     } else {
         /* init from start */
+        *nth = 0;
         sha1_init(h);
-        prep((uint8_t*)x, 64,
+        prep((uint8_t*)chunk, 64,
              (uint8_t*)"", 0);
-        sha1_step(h, x, 1);
+        report(*nth, h, chunk);
+
+        *nth = 1;
+        sha1_step(h, chunk, 1);
+        report(*nth, h, chunk);
     }
 }
 
-static void search(uint64_t nth, uint32_t h[5], uint32_t x[16])
+static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
 {
+    ((uint8_t*)chunk)[20] = 0x80; /* set '1' bit */
+    ((uint32_t*)chunk)[15] = (uint32_t)(20 * 8); /* set bit length */
+    memcpy(chunk, h, 20);
+    dump_state(h, chunk);
+    assert(0 == memcmp(chunk, Chunk_DA39, sizeof Chunk_DA39));
+
     do {
-        memcpy(x, h, sizeof h);
-        sha1_step(h, x, 1);
+        memcpy(chunk, h, 20);
+        sha1_init(h);
+        sha1_step(h, chunk, 1);
         nth++;
-        if ((nth & 0xfffffffUL) == 0)
-            report(nth, h);
-    } while (memcmp(h, x, sizeof h));
+        if ((nth & 0xfffffffUL) == 2) /* every so often */
+            report(nth, h, chunk);
+    } while (memcmp(h, chunk, sizeof h));
 
     printf("holy shit!\n");
-    report(nth, h);
-    printf("h=%s\n", dump(Buf, h));
-    printf("x=%s\n", dump(Buf, x));
+    report(nth, h, chunk);
 }
 
 int main(int argc, char *argv[])
 {
-    uint32_t h[5], x[16];
+    uint32_t h[5], chunk[16];
     uint64_t nth = 0;
 
-    init(argc, argv, &nth, h, x);
-    report(nth, h);
-    search(nth, h, x);
+    printf("tests...\n");
+    test_empty();
+    test_da39();
+    test_6162();
+    test_9200();
+
+    printf("for real...\n");
+    init(argc, argv, &nth, h, chunk);
+    search(nth, h, chunk);
 
     return 0;
 }
