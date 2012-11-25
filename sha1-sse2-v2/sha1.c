@@ -183,10 +183,10 @@ static inline uint32_t f60_79(uint32_t x, uint32_t y, uint32_t z)
 }
 
 
-#define step(nn_mm, xa, xb, xc, xd, xe, xt, input) do {					\
-		(xt) = (input) + f##nn_mm((xb), (xc), (xd));				\
-		(xb) = rol((xb), 30); 							\
-		(xt) += ((xe) + rol((xa), 5));						\
+#define step(nn_mm, xa, xb, xc, xd, xe, xt, input) do {			\
+		(xt) = (input) + f##nn_mm((xb), (xc), (xd));		\
+		(xb) = rol((xb), 30); 					\
+		(xt) += ((xe) + rol((xa), 5));				\
 	} while(0)
 
 void sha1_step(uint32_t * restrict H, const uint32_t * restrict inputu, size_t num_steps)
