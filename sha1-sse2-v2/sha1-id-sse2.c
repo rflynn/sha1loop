@@ -70,10 +70,15 @@ static void report(uint64_t nth, const uint32_t h[5], const uint32_t chunk[16])
 #if 0
 $ echo -n "" | sha1sum
 da39a3ee5e6b4b0d3255bfef95601890afd80709  -
-$ echo -ne '\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09' | sha1sum
+$ echo -ne '\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09' | sha1sum -b
 be1bdec0aa74b4dcb079943e70528096cca985f8  -
-$ echo -ne '\xee\xa3\x39\xda\x0d\x4b\x6b\x5e\xef\xbf\x55\x32\x55\x90\x18\x60\x95\x09\x07\xd8\xaf' | sha1sum
-edb20af7fe03f2a1e2aad51095491b7f5226f6f5  -
+$ echo -ne '\xee\xa3\x39\xda\x0d\x4b\x6b\x5e\xef\xbf\x55\x32\x90\x18\x60\x95\x09\x07\xd8\xaf' | sha1sum -b
+7aeccd0ff516c1eac7014fff48549666a7106cf4 *-
+
+$ echo -ne '\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09' | od -t x1
+0000000 da 39 a3 ee 5e 6b 4b 0d 32 55 bf ef 95 60 18 90
+0000020 af d8 07 09
+
 #endif
 
 #define S(x) (x)
@@ -84,6 +89,18 @@ edb20af7fe03f2a1e2aad51095491b7f5226f6f5  -
      (((x) & 0x0000FF00UL) << 8) | \
      ((x) << 24))
 
+static const uint8_t Chunk_DA39[20] =
+    //"\xda\x39\xa3\xee"
+    //"\x5e\x6b\x4b\x0d"
+    //"\x32\x55\xbf\xef"
+    //"\x95\x60\x18\x90"
+    //"\xaf\xd8\x07\x09";
+    "\xee\xa3\x39\xda"
+    "\x0d\x4b\x6b\x5e"
+    "\xef\xbf\x55\x32"
+    "\x90\x18\x60\x95"
+    "\x09\x07\xd8\xaf";
+
 static void test_empty(void)
 {
     uint32_t h[5] = SHA1_INIT;
@@ -93,27 +110,19 @@ static void test_empty(void)
         S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
         S(0x00000000)
     };
-    const uint32_t expect[5] = {
-        0xda39a3ee, 0x5e6b4b0d, 0x3255bfef, 0x95601890, 0xafd80709
-    };
+    const uint8_t *expect = Chunk_DA39;
     sha1_step(h, chunk, 1);
     dump_state(h, chunk);
     assert(0 == memcmp(h, expect, sizeof expect));
 }
 
-static const uint32_t Chunk_DA39[16] = {
-    S(0xda39a3ee), S(0x5e6b4b0d), S(0x3255bfef), S(0x95601890), S(0xafd80709),
-    S(0x00000080), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
-    S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
-    S(0x000000a0)
-};
-
 static void test_da39(void)
 {
     uint32_t h[5] = SHA1_INIT;
-    const uint32_t *chunk = Chunk_DA39;
+    const uint32_t *chunk = (uint32_t*)Chunk_DA39;
     const uint32_t expect[5] = {
         0x2085e9ba, 0x62755587, 0xc413088f, 0xe2ab1523, 0xeaba1f95
+        // eb3c2c07 6026ec86 ff8b7193 ed0099b3 5b577796
     };
     sha1_step(h, chunk, 1);
     dump_state(h, chunk);
@@ -129,13 +138,20 @@ static void test_6162(void)
 	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
 	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000018)
     };
-    const uint32_t expect[SHA1_HASH_SIZE] = {
+    const uint32_t expect[5] = {
 	    0xa9993e36, 0x4706816a, 0xba3e2571, 0x7850c26c, 0x9cd0d89d
     };
     sha1_step(h, chunk, 1);
     dump_state(h, chunk);
     assert(0 == memcmp(h, expect, sizeof expect));
 }
+
+#if 0
+$ echo -ne '\x92\x00\x39\x6e\x48\x3b\x4a\xdf\x96\xcb\xc0\xab\x59\xb3\xf3\x4c\x6d\xf2\xa9\xbb' | sha1sum
+02f4815b027af73010cdcb1dcf8378ce621868b9  -
+
+h=2a1dcd0c 3ba1019e 9e1e6b6e 377bb26f 1139abc7 chunk=9200396e 483b4adf 96cbc0ab 59b3f34c 6df2a9bb 00000080 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000a0
+#endif
 
 static void test_9200(void)
 {
@@ -146,10 +162,13 @@ static void test_9200(void)
         S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000), S(0x00000000),
         S(0x000000a0)
     };
+    const uint32_t expect[5] = {
+        0x02f4815b, 0x027af730, 0x10cdcb1d, 0xcf8378ce, 0x621868b9
+    };
     sha1_step(h, chunk, 1);
     dump_state(h, chunk);
+    assert(0 == memcmp(h, expect, sizeof expect));
 }
-
 
 static void prep(uint8_t *dst, uint64_t dstlen,
            const uint8_t *src, uint64_t srclen)
@@ -238,4 +257,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
 
