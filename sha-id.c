@@ -23,6 +23,10 @@ int main(void)
     SHA1Result(&ctx, (uint8_t*)x);
     y[0] = x[0]+1;
 
+    printf("%llu ", cnt);
+    dump((uint8_t*)x);
+    fputc('\n', stdout);
+
     while (x[0] != y[0] || x[1] != y[1] || x[2] != y[2])
     {
         y[0] = x[0], y[1] = x[1], y[2] = x[2];
@@ -30,8 +34,12 @@ int main(void)
         SHA1Input(&ctx, (uint8_t*)x, 20);
         SHA1Result(&ctx, (uint8_t*)x);
         cnt++;
-        if ((cnt & 0xfffffff) == 0)
-            fprintf(stderr, "%.1fB ", (double)cnt / 1e9);
+        if ((cnt & 0xffffffff) == 0)
+        {
+            printf("%llu ", cnt);
+            dump((uint8_t*)x);
+            fputc('\n', stdout);
+        }
     }
 
     printf("holy shit! cnt=%llu\n", cnt);
