@@ -47,23 +47,22 @@ static char Buf[64];
 
 static char * dump_sha1(char buf[64], const uint32_t h[5])
 {
-    const uint8_t *c = (const uint8_t*)h;
     snprintf(buf, 64,
-        "%02x%02x%02x%02x%02x" "%02x%02x%02x%02x%02x"
-        "%02x%02x%02x%02x%02x" "%02x%02x%02x%02x%02x",
-        c[3],  c[2],  c[1],  c[0],
-        c[7],  c[6],  c[5],  c[4],
-        c[11], c[10], c[9],  c[8],
-        c[15], c[14], c[13], c[12],
-        c[19], c[18], c[17], c[16]);
+        "%08x%08x%08x%08x%08x",
+        h[0], h[1], h[2], h[3], h[4]);
     return buf;
 }
 
 static void dump_msg(const uint32_t *chunk)
 {
-    const uint8_t *c = (const uint8_t*)chunk;
-	for (unsigned i = 0; i < 64; i += 4)
-		printf("%02x%02x%02x%02x ", c[i], c[i+1], c[i+2], c[i+3]);
+    printf("%08x %08x %08x %08x %08x %08x ... %08x",
+        BSWAP32(chunk[0]),
+        BSWAP32(chunk[1]),
+        BSWAP32(chunk[2]),
+        BSWAP32(chunk[3]),
+        BSWAP32(chunk[4]),
+        BSWAP32(chunk[5]),
+        BSWAP32(chunk[15]));
 }
 
 static void dump_state(const uint32_t h[5], const uint32_t chunk[16])
@@ -262,7 +261,7 @@ static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
         nth++;
         if ((nth & 0xfffffffUL) == 0) /* every so often */
             report(nth, h, chunk);
-    } while (memcmp(h, chunk, 64));
+    } while (h[0] != chunk[0] || h[1] != chunk[1] || h[2] != chunk[2] || h[3] != chunk[3] || h[4] != chunk[4]);
 
     printf("holy shit!\n");
     report(nth, h, chunk);
