@@ -22,7 +22,10 @@
      (((x) & 0x0000FF00UL) << 8) | \
      ((x) << 24))
 
-#define SHA1_INIT   \
+# define BSWAP32 ntohl /* NOTE: works on little-endian only, but x86 is assumed... */
+# define BSWAP64 __bswap_64 /* GCC built-in */
+
+#define SHA1_INIT \
     { 0x67452301, \
       0xEFCDAB89, \
       0x98BADCFE, \
@@ -103,10 +106,10 @@ static void test_empty(void)
 {
     uint32_t h[5] = SHA1_INIT;
     const uint32_t chunk[16] = {
-        SWAP(0x80000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-        SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-        SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-        SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000)
+        BSWAP32(0x80000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+        BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+        BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+        BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000)
     };
     const uint32_t *expect = Chunk_DA39;
     sha1_step(h, chunk, 1);
@@ -120,10 +123,10 @@ static void test_da39(void)
 {
     uint32_t h[5] = SHA1_INIT;
     const uint32_t chunk[16] = {
-        SWAP(0xda39a3ee), SWAP(0x5e6b4b0d), SWAP(0x3255bfef), SWAP(0x95601890),
-        SWAP(0xafd80709), SWAP(0x80000000), SWAP(0x00000000), SWAP(0x00000000),
-        SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-        SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x000000a0)
+        BSWAP32(0xda39a3ee), BSWAP32(0x5e6b4b0d), BSWAP32(0x3255bfef), BSWAP32(0x95601890),
+        BSWAP32(0xafd80709), BSWAP32(0x80000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+        BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+        BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x000000a0)
     };
     const uint32_t expect[5] = {
         0xbe1bdec0, 0xaa74b4dc, 0xb079943e, 0x70528096, 0xcca985f8
@@ -148,9 +151,9 @@ static void prep(uint8_t *dst, uint64_t dstlen,
     dst[srclen] = 0x80; /* append the bit '1' to the message */
     for (unsigned i = 0; i < 16; i++)
     {
-        //dst32[i] = SWAP(dst32[i]);
+        //dst32[i] = BSWAP32(dst32[i]);
     }
-    dst32[15] = SWAP((uint32_t)(srclen * 8));
+    dst32[15] = BSWAP32((uint32_t)(srclen * 8));
 }
 
 static void test_da39_prep(void)
@@ -184,10 +187,10 @@ static void test_6162(void)
 {
     uint32_t h[5] = SHA1_INIT;
     const uint32_t chunk[SHA1_STEP_SIZE] = {
-	    SWAP(0x61626380), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
-	    SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000018)
+	    BSWAP32(0x61626380), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+	    BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+	    BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000),
+	    BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000000), BSWAP32(0x00000018)
     };
     const uint32_t expect[5] = {
 	    0xa9993e36, 0x4706816a, 0xba3e2571, 0x7850c26c, 0x9cd0d89d
@@ -228,44 +231,38 @@ static void init(int argc, char *argv[],
         sha1_init(h);
         prep((uint8_t*)chunk, 64,
              (uint8_t*)"", 0);
-        report(*nth, h, chunk);
-
-        *nth = 1;
         sha1_step(h, chunk, 1);
         report(*nth, h, chunk);
+
+        prep((uint8_t*)chunk, 64,
+             (uint8_t*)h, 20);
+
+        //static void prep(uint8_t *dst, uint64_t dstlen, const uint8_t *src, uint64_t srclen)
+
     }
 }
 
 static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
 {
-    prep((uint8_t*)chunk, 64,
-         (uint8_t*)h, nth ? 20 : 0);
-
     printf("%s chunk=", __func__);
     dump_msg(chunk);
     fputc('\n', stdout);
 
-/*
-for real...
-    t=0 nth=0 h=0000000000000000000000000000000000000000 chunk=80000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-    t=0 nth=1 h=0ffd8d43b4e33c7c53461bd10f27a5461050d90d chunk=80000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-    search chunk=438dfd0f 7c3ce3b4 d11b4653 46a5270f 0dd95010 80000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000a0
-        h=0ffd8d43b4e33c7c53461bd10f27a5461050d90d chunk=438dfd0f 7c3ce3b4 d11b4653 46a5270f 0dd95010 80000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000a0
-    t=0 nth=2 h=c76d9a1c9eb5333d11d5c7d45b401d59cc549f02 chunk=438dfd0f 7c3ce3b4 d11b4653 46a5270f 0dd95010 80000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000a0
-*/
-
     dump_state(h, chunk);
-    if (nth == 0)
-        assert(0 == memcmp(chunk, Chunk_DA39, sizeof Chunk_DA39));
 
     do {
-        memcpy(chunk, h, 20);
+        chunk[0] = BSWAP32(h[0]);
+        chunk[1] = BSWAP32(h[1]);
+        chunk[2] = BSWAP32(h[2]);
+        chunk[3] = BSWAP32(h[3]);
+        chunk[4] = BSWAP32(h[4]);
+
         sha1_init(h);
         sha1_step(h, chunk, 1);
         nth++;
-        if ((nth & 0xfffffffUL) == 2) /* every so often */
+        if ((nth & 0xfffffffUL) == 0) /* every so often */
             report(nth, h, chunk);
-    } while (memcmp(h, chunk, sizeof h));
+    } while (memcmp(h, chunk, 64));
 
     printf("holy shit!\n");
     report(nth, h, chunk);
