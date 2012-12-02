@@ -259,7 +259,7 @@ static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
         sha1_init(h);
         sha1_step(h, chunk, 1);
         nth++;
-        if ((nth & 0xfffffffUL) == 0) /* every so often */
+        if ((nth & 0xffffffffUL) == 0) /* every so often */
             report(nth, h, chunk);
     } while (h[0] != chunk[0] || h[1] != chunk[1] || h[2] != chunk[2] || h[3] != chunk[3] || h[4] != chunk[4]);
 
