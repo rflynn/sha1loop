@@ -3,9 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 #include <assert.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <openssl/rand.h>
 #include "sha1.h"
 
 #ifdef __INTEL_COMPILER
@@ -13,14 +17,6 @@
 #else
 #include <xmmintrin.h>
 #endif
-
-#define S(x) (x)
-
-#define SWAP(x)                    \
-    (((x) >> 24)                 | \
-     (((x) & 0x00FF0000UL) >> 8) | \
-     (((x) & 0x0000FF00UL) << 8) | \
-     ((x) << 24))
 
 # define BSWAP32 ntohl /* NOTE: works on little-endian only, but x86 is assumed... */
 # define BSWAP64 __bswap_64 /* GCC built-in */
@@ -75,7 +71,10 @@ static void dump_state(const uint32_t h[5], const uint32_t chunk[16])
 static void report(uint64_t nth, const uint32_t h[5], const uint32_t chunk[16])
 {
     unsigned long long elapsed = time(0) - Start;
-    printf("t=%llu nth=%llu ", elapsed, nth);
+    if (elapsed  == 0)
+        elapsed = 1;
+    printf("t=%llu nth=%llu %4.1fM/sec ",
+        elapsed, nth, (double)nth / 1e6 / elapsed);
     dump_state(h, chunk);
 }
 
@@ -94,11 +93,11 @@ $ echo -ne '\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf
 
 static const uint32_t Chunk_DA39[5] =
 {
-    S(0xda39a3ee),
-    S(0x5e6b4b0d),
-    S(0x3255bfef),
-    S(0x95601890),
-    S(0xafd80709)
+    0xda39a3ee,
+    0x5e6b4b0d,
+    0x3255bfef,
+    0x95601890,
+    0xafd80709
 };
 
 static void test_empty(void)
@@ -169,7 +168,8 @@ static void test_da39_prep(void)
     const uint32_t expect[5] = {
         0xbe1bdec0, 0xaa74b4dc, 0xb079943e, 0x70528096, 0xcca985f8
     };
-    prep(chunk, sizeof chunk,
+
+    prep((uint8_t*)chunk, sizeof chunk,
          input, sizeof input);
 
     printf("%s chunk=", __func__);
@@ -235,13 +235,10 @@ static void init(int argc, char *argv[],
 
         prep((uint8_t*)chunk, 64,
              (uint8_t*)h, 20);
-
-        //static void prep(uint8_t *dst, uint64_t dstlen, const uint8_t *src, uint64_t srclen)
-
     }
 }
 
-static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
+static int search(uint64_t *nth, uint32_t *h, uint32_t *chunk)
 {
     printf("%s chunk=", __func__);
     dump_msg(chunk);
@@ -250,36 +247,119 @@ static void search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
     dump_state(h, chunk);
 
     do {
+        /* use hash output for next input */
         chunk[0] = BSWAP32(h[0]);
         chunk[1] = BSWAP32(h[1]);
         chunk[2] = BSWAP32(h[2]);
         chunk[3] = BSWAP32(h[3]);
         chunk[4] = BSWAP32(h[4]);
-
         sha1_init(h);
         sha1_step(h, chunk, 1);
-        nth++;
-        if ((nth & 0xffffffffUL) == 0) /* every so often */
-            report(nth, h, chunk);
-    } while (h[0] != chunk[0] || h[1] != chunk[1] || h[2] != chunk[2] || h[3] != chunk[3] || h[4] != chunk[4]);
+        *nth = ++*nth;
+    } while (memcmp(h, chunk, 20));
 
     printf("holy shit!\n");
-    report(nth, h, chunk);
+    report(*nth, h, chunk);
+
+    return 0;
 }
 
-int main(int argc, char *argv[])
+static unsigned long cpucnt(void)
+{
+    FILE *f = popen("sysctl -n hw.ncpu", "r");
+    unsigned long cpus = 1;
+    if (f)
+    {
+        char buf[32];
+        if (fgets(buf, sizeof buf, f))
+        {
+            unsigned long n = strtoul(buf, NULL, 10);
+            cpus = n;
+        }
+    }
+    pclose(f);
+    return cpus;
+}
+
+struct searchparams {
+    unsigned long worker;
+    uint64_t nth;
+    uint32_t h[5];
+    uint32_t chunk[16];
+};
+
+static void *search_thread(void *args)
+{
+    struct searchparams *params = args;
+    search(&params->nth, params->h, params->chunk);
+    printf("done\n");
+    exit(0);
+    pthread_exit(NULL);
+}
+
+static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
+{
+    unsigned long workers = 7;
+    struct searchparams *params = calloc(workers, sizeof *params);
+    pthread_t *thread = calloc(workers, sizeof *thread);
+    unsigned long i;
+
+    printf("workers=%lu\n", workers);
+
+    for (i = 0; i < workers; i++)
+    {
+        params[i].worker = i;
+        params[i].nth = nth;
+
+        memcpy(params[i].h, h, sizeof *h);
+        params[i].h[0] = rand();
+
+        memcpy(params[i].chunk, chunk, sizeof *chunk);
+        pthread_create(thread, NULL, search_thread, params+i);
+    }
+
+    while (1)
+    {
+        uint64_t n;
+
+        sleep(10);
+        n = 0;
+        for (i = 0; i < workers; i++)
+            n += params[i].nth;
+        report(n, params[0].h, params[0].chunk);
+    }
+
+    /*
+     * wait for one of them to find it and blow up
+     */
+    pthread_join(*thread, NULL);
+
+    return search(&nth, h, chunk); /* never run */
+}
+
+static int run(int argc, char *argv[])
 {
     uint32_t h[5], chunk[16];
     uint64_t nth = 0;
 
-    printf("tests...\n");
+    printf("search...\n");
+    init(argc, argv, &nth, h, chunk);
+
+    return run_search(nth, h, chunk);
+}
+
+static void test(void)
+{
+    printf("test...\n");
     test_empty();
     test_da39();
     test_da39_prep();
     test_6162();
-    printf("for real...\n");
-    init(argc, argv, &nth, h, chunk);
-    search(nth, h, chunk);
+}
 
-    return 0;
+int main(int argc, char *argv[])
+{
+    srand(time(0));
+    test();
+    return run(argc, argv);
 }

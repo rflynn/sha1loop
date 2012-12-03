@@ -1,6 +1,15 @@
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+LDFLAGS=-g # OS X
+CC=clang # 5.1M/sec vs gcc 4.2.1 4.6M/sec2
+else
 LDFLAGS=-g -static
-CC=gcc
-CFLAGS=-std=c99 -O3 -g -Wall -march=nocona -fomit-frame-pointer
+endif
+
+#CC=gcc
+CFLAGS=-std=c99 -O3 -g -W -Wall -march=core2 -mtune=core2 -msse2 -fomit-frame-pointer
+#CFLAGS=-std=c99 -O3 -g -W -Wall -march=corei7 -mtune=corei7 -msse2 -fomit-frame-pointer
 
 #CFLAGS=-std=c99 -O2 -g -march=pentium4 -fno-alias -unroll1
 #CC=icc
