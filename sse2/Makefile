@@ -8,7 +8,8 @@ LDFLAGS=-g -static
 endif
 
 #CC=gcc
-CFLAGS=-std=c99 -O3 -g -W -Wall -march=core2 -mtune=core2 -msse2 -fomit-frame-pointer
+CFLAGS=-std=c99 -O3 -W -Wall -march=core2 -mtune=core2 -msse2 -fomit-frame-pointer
+CC=/Users/rflynn93/src/llvm/Debug+Asserts/bin/clang
 #CFLAGS=-std=c99 -O3 -g -W -Wall -march=corei7 -mtune=corei7 -msse2 -fomit-frame-pointer
 
 #CFLAGS=-std=c99 -O2 -g -march=pentium4 -fno-alias -unroll1

@@ -42,6 +42,7 @@ extern  INTEL_SHA1_UPDATE_DEFAULT_DISPATCH
 %endif
 
 global INTEL_SHA1_UPDATE_FUNCNAME
+global _sha1_update_intel
 
 
 %ifndef INTEL_SHA1_SINGLEBLOCK
@@ -525,12 +526,14 @@ SHA1_VECTOR_ASM     sha1_update_intel_ssse3_, multiblock
 
 align 32
 sha1_update_intel_init_:       ;; we get here with the first time invocation
- call    sha1_update_intel_dispacth_init_
+ call    sha1_update_intel_dispatch_init_
 INTEL_SHA1_UPDATE_FUNCNAME:    ;; we get here after init
+ jmp     qword [sha1_update_intel_dispatched]
+_sha1_update_intel: ;; we get here after init
  jmp     qword [sha1_update_intel_dispatched]
 
 ;; CPUID feature flag based dispatch
-sha1_update_intel_dispacth_init_:
+sha1_update_intel_dispatch_init_:
  push    rax
  push    rbx
  push    rcx

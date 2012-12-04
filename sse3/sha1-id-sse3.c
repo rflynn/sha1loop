@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-extern void sha1_update_intel(uint32_t *hash, const uint8_t* input);
+//extern void sha1_update_intel(uint32_t *hash, const uint8_t* input);
 
 static void dump(const uint8_t s[20])
 {

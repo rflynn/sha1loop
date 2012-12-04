@@ -75,7 +75,10 @@ static void report(uint64_t nth, const uint32_t h[5], const uint32_t chunk[16])
         elapsed = 1;
     printf("t=%llu nth=%llu %4.1fM/sec ",
         elapsed, nth, (double)nth / 1e6 / elapsed);
-    dump_state(h, chunk);
+    if (h || chunk)
+        dump_state(h, chunk);
+    else
+        fputc('\n', stdout);
 }
 
 /*
@@ -238,7 +241,7 @@ static void init(int argc, char *argv[],
     }
 }
 
-static int search(uint64_t *nth, uint32_t *h, uint32_t *chunk)
+static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
 {
     printf("%s chunk=", __func__);
     dump_msg(chunk);
@@ -299,20 +302,19 @@ static void *search_thread(void *args)
 
 static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
 {
-    unsigned long workers = 7;
+    unsigned long workers = cpucnt();
     struct searchparams *params = calloc(workers, sizeof *params);
     pthread_t *thread = calloc(workers, sizeof *thread);
-    unsigned long i;
 
     printf("workers=%lu\n", workers);
 
-    for (i = 0; i < workers; i++)
+    for (unsigned long i = 0; i < workers; i++)
     {
         params[i].worker = i;
         params[i].nth = nth;
 
-        memcpy(params[i].h, h, sizeof *h);
-        params[i].h[0] = rand();
+        for (int j = 0; j < 5; j++)
+            params[i].h[i] = rand();
 
         memcpy(params[i].chunk, chunk, 64);
         pthread_create(thread, NULL, search_thread, params+i);
@@ -322,11 +324,11 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
     {
         uint64_t n;
 
-        sleep(10);
+        sleep(10 * 60);
         n = 0;
-        for (i = 0; i < workers; i++)
+        for (unsigned long i = 0; i < workers; i++)
             n += params[i].nth;
-        report(n, params[0].h, params[0].chunk);
+        report(n, NULL, NULL);
     }
 
     /*
