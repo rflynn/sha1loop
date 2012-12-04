@@ -314,7 +314,7 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
         memcpy(params[i].h, h, sizeof *h);
         params[i].h[0] = rand();
 
-        memcpy(params[i].chunk, chunk, sizeof *chunk);
+        memcpy(params[i].chunk, chunk, 64);
         pthread_create(thread, NULL, search_thread, params+i);
     }
 
