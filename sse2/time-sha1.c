@@ -46,7 +46,7 @@ void one(unsigned n)
 }
 
 
-int main(int argc, char **argv)
+int main(void)
 {
 	memset(buf, 0, sizeof(buf));
 	one(16);

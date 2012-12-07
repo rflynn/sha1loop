@@ -3,7 +3,7 @@
 #include <string.h>
 #include "sha1.h"
 
-#define SWAP(x)	(((x) >> 24) | (((x)&0x00FF0000) >> 8) | (((x)&0x0000FF00) << 8) | (x << 24))
+#define SWAP(x)	(((x) >> 24) | (((x)&0x00FF0000) >> 8) | (((x)&0x0000FF00) << 8) | ((uint8_t)x << 24))
 
 const uint32_t message0[SHA1_STEP_SIZE] = {
 	SWAP(0x61626380), SWAP(0x00000000), SWAP(0x00000000), SWAP(0x00000000),
@@ -88,7 +88,7 @@ int test(const uint32_t *message, uint32_t num_steps, const uint32_t *H_expected
 }
 
 
-int main(int argc, char **argv)
+int main(void)
 {
 	int fails;
 
