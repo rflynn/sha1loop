@@ -4,12 +4,12 @@ ifeq ($(UNAME), Darwin)
 LDFLAGS=-g # OS X
 CC=clang # 5.1M/sec vs gcc 4.2.1 4.6M/sec2
 else
-LDFLAGS=-g -static
+LDFLAGS=-g -lpthread
 endif
 
 #CC=gcc
-CFLAGS=-std=c99 -O3 -W -Wall -march=core2 -mtune=core2 -msse2 -fomit-frame-pointer
-CC=/Users/rflynn93/src/llvm/Debug+Asserts/bin/clang
+CFLAGS=-std=gnu99 -O3 -W -Wall -march=core2 -mtune=core2 -msse2 -fomit-frame-pointer
+#CC=/Users/rflynn93/src/llvm/Debug+Asserts/bin/clang
 #CFLAGS=-std=c99 -O3 -g -W -Wall -march=corei7 -mtune=corei7 -msse2 -fomit-frame-pointer
 
 #CFLAGS=-std=c99 -O2 -g -march=pentium4 -fno-alias -unroll1

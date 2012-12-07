@@ -9,7 +9,6 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <openssl/rand.h>
 #include "sha1.h"
 
 #ifdef __INTEL_COMPILER
@@ -29,7 +28,7 @@
       0xC3D2E1F0  \
     }
 
-static void inline sha1_init(uint32_t h[5])
+inline static void sha1_init(uint32_t h[5])
 {
     h[0] = 0x67452301;
     h[1] = 0xEFCDAB89;
@@ -269,8 +268,15 @@ static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
 
 static unsigned long cpucnt(void)
 {
-    FILE *f = popen("sysctl -n hw.ncpu", "r");
     unsigned long cpus = 1;
+#if defined(LINUX) && defined(_SC_NPROCESSORS_CONF)
+    long nprocs = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nprocs > 0)
+    {
+        cpus = (unsigned long)nprocs;
+    }
+#elif defined(__APPLE__)
+    FILE *f = popen("PATH=$PATH:/usr/sbin:/sbin sysctl -n hw.ncpu", "r");
     if (f)
     {
         char buf[32];
@@ -281,6 +287,9 @@ static unsigned long cpucnt(void)
         }
     }
     pclose(f);
+#else
+    /* use default... */
+#endif
     return cpus;
 }
 
