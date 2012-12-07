@@ -42,7 +42,7 @@ void one(unsigned n)
 	/* print a number similar to what openssl reports */
 	printf("%.2f KB/s (for %lu byte buffer)\n",
 		(double)(n * sizeof(uint32_t) * n_iter) / best / 1000.0 + 0.005,
-		n*sizeof(uint32_t));
+		(unsigned long)n*sizeof(uint32_t));
 }
 
 
