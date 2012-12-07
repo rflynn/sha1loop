@@ -269,7 +269,7 @@ static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
 static unsigned long cpucnt(void)
 {
     unsigned long cpus = 1;
-#if defined(LINUX) && defined(_SC_NPROCESSORS_CONF)
+#if defined(linux) && defined(_SC_NPROCESSORS_CONF)
     long nprocs = sysconf(_SC_NPROCESSORS_ONLN);
     if (nprocs > 0)
     {
