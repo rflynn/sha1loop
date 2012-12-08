@@ -323,7 +323,9 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
         params[i].nth = nth;
 
         for (int j = 0; j < 5; j++)
-            params[i].h[i] = (uint32_t)((rand() << 16) ^ rand());
+            params[i].h[j] = (uint32_t)((rand() << 16) + rand());
+
+        printf("params[%lu]=%s\n", i, dump_sha1(Buf, params[i].h));
 
         memcpy(params[i].chunk, chunk, 64);
         pthread_create(thread, NULL, search_thread, params+i);
