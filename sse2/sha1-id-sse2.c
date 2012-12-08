@@ -39,6 +39,7 @@ inline static void sha1_init(uint32_t h[5])
 
 static time_t Start;
 static char Buf[64];
+static char Buf[64];
 
 static char * dump_sha1(char buf[64], const uint32_t h[5])
 {
@@ -66,6 +67,13 @@ static void dump_state(const uint32_t h[5], const uint32_t chunk[16])
     dump_msg(chunk);
     fputc('\n', stdout);
 }
+
+#if 0
+static void dump_state2(const uint32_t h[5], const uint32_t chunk[16])
+{
+    printf("h=%s chunk=%s\n", dump_sha1(Buf, h), dump_msg(MsgBuf, chunk));
+}
+#endif
 
 static void report(uint64_t nth, const uint32_t h[5], const uint32_t chunk[16])
 {
@@ -242,11 +250,13 @@ static void init(int argc, char *argv[],
 
 static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
 {
+#if 0
     printf("%s chunk=", __func__);
     dump_msg(chunk);
     fputc('\n', stdout);
 
     dump_state(h, chunk);
+#endif
 
     do {
         /* use hash output for next input */
@@ -258,7 +268,7 @@ static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
         sha1_init(h);
         sha1_step(h, chunk, 1);
         ++*nth;
-    } while (memcmp(h, chunk, 20));
+    } while (*h != *chunk || memcmp(h, chunk, 20));
 
     printf("holy shit!\n");
     report(*nth, h, chunk);
@@ -333,7 +343,7 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
     {
         uint64_t n;
 
-        sleep(10 * 60);
+        sleep(10);
         n = 0;
         for (unsigned long i = 0; i < workers; i++)
             n += params[i].nth;

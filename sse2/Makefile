@@ -2,7 +2,6 @@ UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
 LDFLAGS=-g # OS X
-CC=clang # 5.1M/sec vs gcc 4.2.1 4.6M/sec2
 else
 LDFLAGS=-g -lpthread
 endif
