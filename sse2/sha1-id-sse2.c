@@ -257,7 +257,7 @@ static int search(uint64_t *nth, uint32_t h[5], uint32_t chunk[16])
         chunk[4] = BSWAP32(h[4]);
         sha1_init(h);
         sha1_step(h, chunk, 1);
-        *nth = ++*nth;
+        ++*nth;
     } while (memcmp(h, chunk, 20));
 
     printf("holy shit!\n");
