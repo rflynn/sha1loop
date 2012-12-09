@@ -324,6 +324,7 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
     unsigned long workers = cpucnt();
     struct searchparams *params = calloc(workers, sizeof *params);
     pthread_t *thread = calloc(workers, sizeof *thread);
+    unsigned secs = 10;
 
     printf("workers=%lu\n", workers);
 
@@ -345,7 +346,10 @@ static int run_search(uint64_t nth, uint32_t h[5], uint32_t chunk[16])
     {
         uint64_t n;
 
-        sleep(10);
+        sleep(secs);
+        if (secs < 600)
+            secs += 10; /* gradually increase */
+
         n = 0;
         for (unsigned long i = 0; i < workers; i++)
             n += params[i].nth;
