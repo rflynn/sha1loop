@@ -17,7 +17,7 @@
 #include <xmmintrin.h>
 #endif
 
-# define BSWAP32 __bswap_32 /* NOTE: works on little-endian only, but x86 is assumed... */
+# define BSWAP32 ntohl /* NOTE: works on little-endian only, but x86 is assumed... */
 # define BSWAP64 __bswap_64 /* GCC built-in */
 
 #define SHA1_INIT \
